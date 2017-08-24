@@ -5,7 +5,7 @@ The following are the descriptions of each project:
 Based on Tensorflow, use DNN structure to classify the dataset.
 
 #### [1] MNIST Task
-This task is based on the tutorial: [tensorflow.org](https://www.tensorflow.org/get_started/mnist/beginners)
+This task is based on the tutorial: [tensorflow.org](https://www.tensorflow.org/get_started/mnist/beginners).
 Add activation functions and several hidden layers to complete the DNN structure and improve the performance.
 
 #### [2] CIFAR-10 Task
