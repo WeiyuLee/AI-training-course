@@ -156,7 +156,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32), name='accuracy')
 ##############################
 epochs = 15
 batch_size = 128
-keep_probability = 1.
+keep_probability = 0.75
         
 save_model_path = './checkpoint'
 if not os.path.exists(save_model_path):
