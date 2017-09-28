@@ -61,7 +61,7 @@ def _preprocess_and_save(normalize, one_hot_encode, features, labels, filename):
     """
     Preprocess data and save it to file
     """
-    features = normalize(features)
+    features, m, sd = normalize(features)
     labels = one_hot_encode(labels)
 
     pickle.dump((features, labels), open(filename, 'wb'))
@@ -74,30 +74,33 @@ def preprocess_and_save_data(cifar10_dataset_folder_path, normalize, one_hot_enc
     n_batches = 5
     valid_features = []
     valid_labels = []
-
+    features = []
+    labels = []
     for batch_i in range(1, n_batches + 1):
-        features, labels = load_cfar10_batch(cifar10_dataset_folder_path, batch_i)
-        validation_count = int(len(features) * 0.1)
+        curr_features, curr_labels = load_cfar10_batch(cifar10_dataset_folder_path, batch_i)
+        
+        if len(features) is 0:
+            features = curr_features
+            labels = curr_labels
+        else:
+            features = np.concatenate((features, curr_features))
+            labels = np.concatenate((labels, curr_labels))
+    
+    # Preprocess training & validation data
+    features, m = normalize(features)
+    labels = one_hot_encode(labels)
+    
+    validation_count = int(len(features) * 0.1)
 
-        # Prprocess and save a batch of training data
-        _preprocess_and_save(
-            normalize,
-            one_hot_encode,
-            features[:-validation_count],
-            labels[:-validation_count],
-            'preprocess_batch_' + str(batch_i) + '.p')
+    # Use a portion of training batch for validation
+    valid_features.extend(features[-validation_count:])
+    valid_labels.extend(labels[-validation_count:])
 
-        # Use a portion of training batch for validation
-        valid_features.extend(features[-validation_count:])
-        valid_labels.extend(labels[-validation_count:])
-
-    # Preprocess and Save all validation data
-    _preprocess_and_save(
-        normalize,
-        one_hot_encode,
-        np.array(valid_features),
-        np.array(valid_labels),
-        'preprocess_validation.p')
+    # Save training data
+    pickle.dump((features[:-validation_count], labels[:-validation_count]), open('preprocess_train.p', 'wb'))
+    
+    # Save validation data
+    pickle.dump((np.array(valid_features), np.array(valid_labels)), open('preprocess_validation.p', 'wb'))
 
     with open(cifar10_dataset_folder_path + '/test_batch', mode='rb') as file:
         batch = pickle.load(file, encoding='latin1')
@@ -106,15 +109,13 @@ def preprocess_and_save_data(cifar10_dataset_folder_path, normalize, one_hot_enc
     test_features = batch['data'].reshape((len(batch['data']), 3, 32, 32)).transpose(0, 2, 3, 1)
     test_labels = batch['labels']
 
-    # Preprocess and Save all test data
-    _preprocess_and_save(
-        normalize,
-        one_hot_encode,
-        np.array(test_features),
-        np.array(test_labels),
-        'preprocess_test.p')
+    # Preprocess training & validation data
+    test_features, m = normalize(test_features, M=m)
+    test_labels = one_hot_encode(test_labels)
 
-
+    # Save test data
+    pickle.dump((np.array(test_features), np.array(test_labels)), open('preprocess_test.p', 'wb'))
+    
 def batch_features_labels(features, labels, batch_size):
     """
     Split features and labels into batches
@@ -123,17 +124,15 @@ def batch_features_labels(features, labels, batch_size):
         end = min(start + batch_size, len(features))
         yield features[start:end], labels[start:end]
 
-
-def load_preprocess_training_batch(batch_id, batch_size):
+def load_preprocess_training_batch(batch_id):
     """
     Load the Preprocessed Training data and return them in batches of <batch_size> or less
     """
     filename = 'preprocess_batch_' + str(batch_id) + '.p'
     features, labels = pickle.load(open(filename, mode='rb'))
 
-    # Return the training data in batches of size <batch_size> or less
-    return batch_features_labels(features, labels, batch_size)
-
+    
+    return features, labels
 
 def display_image_predictions(features, labels, predictions):
     n_classes = 10
